@@ -36,6 +36,7 @@ export default function RootLayout() {
         <Stack.Screen name="movie" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="profile" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="about" options={{ headerShown: false, presentation: 'transparentModal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="privacy" options={{ headerShown: false, presentation: 'transparentModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="auto" />

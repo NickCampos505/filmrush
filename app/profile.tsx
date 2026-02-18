@@ -97,7 +97,7 @@ export default function ProfileScreen() {
           <OptionRow icon="award" label="Badges" dimmed badge="Soon" />
           <OptionRow icon="upload" label="Share With Friends" />
           <OptionRow icon="info" label="About" onPress={() => router.push('/about')} />
-          <OptionRow icon="file-text" label="Privacy Policy" />
+          <OptionRow icon="file-text" label="Privacy Policy" onPress={() => router.push('/privacy')} />
         </View>
       </ScrollView>
     </View>
