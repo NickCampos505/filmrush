@@ -18,8 +18,13 @@ const CARD_GAP = 16;
 const CARD_WIDTH = (SCREEN_WIDTH - H_PAD * 2 - CARD_GAP) / 2;
 const CARD_HEIGHT = CARD_WIDTH * (266 / 177);
 
-// Figma asset URLs
-const LOGO_URL = 'https://www.figma.com/api/mcp/asset/8a6e877a-4108-4f03-b78b-bb0beadca5ce';
+// Assets
+const LOGO = require('@/assets/images/splash.png');
+// splash.png: 1284×2778 — logo centered at ~55% height
+// Scaled to container width 200: height = 200 * (2778/1284) ≈ 433px, logo at ≈238px
+const LOGO_IMG_H = Math.round(200 * (2778 / 1284));
+const LOGO_CROP_TOP = -(Math.round(LOGO_IMG_H * 0.55) - 22);
+
 const CARD_IMAGE_URL = 'https://www.figma.com/api/mcp/asset/033e71b8-cf4d-46e1-813e-334afe8f1e73';
 
 const CATEGORIES = [
@@ -76,7 +81,9 @@ export default function HomeScreen() {
     <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
       {/* Logo + Points */}
       <View style={styles.headerRow}>
-        <Image source={{ uri: LOGO_URL }} style={styles.logo} resizeMode="contain" />
+        <View style={styles.logoContainer}>
+          <Image source={LOGO} style={styles.logoImage} />
+        </View>
         <View style={styles.pointsRow}>
           <View style={styles.pointsBadge}>
             <Text style={styles.pointsText}>10 Pts.</Text>
@@ -164,9 +171,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 4,
   },
-  logo: {
-    width: 160,
-    height: 32,
+  logoContainer: {
+    width: 200,
+    height: 44,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: 200,
+    height: LOGO_IMG_H,
+    position: 'absolute',
+    top: LOGO_CROP_TOP,
+    left: 0,
   },
   pointsRow: {
     flexDirection: 'row',
