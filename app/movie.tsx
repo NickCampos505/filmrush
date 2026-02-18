@@ -37,7 +37,7 @@ export default function MovieScreen() {
       >
         {/* Movie Poster */}
         <Image
-          source={{ uri: film.poster }}
+          source={film.poster}
           style={[styles.poster, { height: POSTER_HEIGHT }]}
           resizeMode="cover"
         />

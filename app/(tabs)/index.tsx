@@ -33,7 +33,7 @@ function MovieCard({ item, onPress }: { item: Film; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
       <View style={styles.cardImageWrap}>
-        <Image source={{ uri: item.poster }} style={styles.cardImage} resizeMode="cover" />
+        <Image source={item.poster} style={styles.cardImage} resizeMode="cover" />
 
         {watched && <View style={styles.cardOverlay} />}
 
