@@ -90,7 +90,7 @@ export default function HomeScreen() {
           <View style={styles.pointsBadge}>
             <Text style={styles.pointsText}>10 Pts.</Text>
           </View>
-          <TouchableOpacity style={styles.userBtn} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.userBtn} activeOpacity={0.7} onPress={() => router.push('/profile')}>
             <Feather name="user" size={24} color="#d4d4d8" />
           </TouchableOpacity>
         </View>
