@@ -41,16 +41,17 @@ type Movie = {
   id: string;
   title: string;
   nominations: number;
+  watched: boolean;
 };
 
 const MOVIES: Movie[] = [
-  { id: '1', title: 'The Secret Agent', nominations: 5 },
-  { id: '2', title: 'The Secret Agent', nominations: 3 },
-  { id: '3', title: 'The Secret Agent', nominations: 7 },
-  { id: '4', title: 'The Secret Agent', nominations: 4 },
-  { id: '5', title: 'The Secret Agent', nominations: 2 },
-  { id: '6', title: 'The Secret Agent', nominations: 6 },
-  { id: '7', title: 'The Secret Agent', nominations: 8 },
+  { id: '1', title: 'The Secret Agent', nominations: 5, watched: false },
+  { id: '2', title: 'The Secret Agent', nominations: 3, watched: true },
+  { id: '3', title: 'The Secret Agent', nominations: 7, watched: false },
+  { id: '4', title: 'The Secret Agent', nominations: 4, watched: true },
+  { id: '5', title: 'The Secret Agent', nominations: 2, watched: false },
+  { id: '6', title: 'The Secret Agent', nominations: 6, watched: false },
+  { id: '7', title: 'The Secret Agent', nominations: 8, watched: false },
 ];
 
 const WATCHED_COUNT = 7;
@@ -61,11 +62,29 @@ function MovieCard({ item, onPress }: { item: Movie; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
       <View style={styles.cardImageWrap}>
+        {/* Poster */}
         <Image source={{ uri: CARD_IMAGE_URL }} style={styles.cardImage} resizeMode="cover" />
-        <TouchableOpacity style={styles.eyeBtn} activeOpacity={0.8}>
-          <Feather name="eye" size={20} color="white" />
-        </TouchableOpacity>
+
+        {/* Watched overlay */}
+        {item.watched && <View style={styles.cardOverlay} />}
+
+        {/* Eye / Check icon — top right */}
+        <View style={styles.cardIconBtn}>
+          <Feather
+            name={item.watched ? 'check-circle' : 'eye'}
+            size={20}
+            color="white"
+          />
+        </View>
+
+        {/* +10 Pts. tag — top left, only visible when watched */}
+        {item.watched && (
+          <View style={styles.pointsTag}>
+            <Text style={styles.pointsTagText}>+10 Pts.</Text>
+          </View>
+        )}
       </View>
+
       <View style={styles.cardInfo}>
         <Text style={styles.cardTitle}>{item.title}</Text>
         <Text style={styles.cardNominations}>{item.nominations} Nominations</Text>
@@ -306,13 +325,33 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  eyeBtn: {
+  cardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 12,
+  },
+  cardIconBtn: {
     position: 'absolute',
     top: 4,
     right: 4,
     padding: 8,
     borderRadius: 8,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  pointsTag: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    borderRadius: 144,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  pointsTagText: {
+    fontSize: 16,
+    fontFamily: 'Gabarito_600SemiBold',
+    color: '#00ff87',
+    lineHeight: 16,
   },
   cardInfo: {
     gap: 4,
