@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { Tag } from '@/components/tag';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const H_PAD = 16;
@@ -122,21 +123,12 @@ export default function HomeScreen() {
         contentContainerStyle={styles.categoriesContent}
       >
         {CATEGORIES.map((cat) => (
-          <TouchableOpacity
+          <Tag
             key={cat}
+            label={cat}
+            active={cat === activeCategory}
             onPress={() => setActiveCategory(cat)}
-            style={[styles.tag, cat === activeCategory ? styles.tagActive : styles.tagDefault]}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[
-                styles.tagLabel,
-                cat === activeCategory ? styles.tagLabelActive : styles.tagLabelDefault,
-              ]}
-            >
-              {cat}
-            </Text>
-          </TouchableOpacity>
+          />
         ))}
       </ScrollView>
 
@@ -234,32 +226,6 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     paddingRight: H_PAD,
   },
-  tag: {
-    borderRadius: 144,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderWidth: 1,
-  },
-  tagActive: {
-    backgroundColor: 'white',
-    borderColor: '#1d1d20',
-  },
-  tagDefault: {
-    backgroundColor: 'transparent',
-    borderColor: '#3f3f46',
-  },
-  tagLabel: {
-    fontSize: 16,
-  },
-  tagLabelActive: {
-    color: '#000',
-    fontFamily: 'Gabarito_600SemiBold',
-  },
-  tagLabelDefault: {
-    color: '#d4d4d8',
-    fontFamily: 'Gabarito_400Regular',
-  },
-
   // Progress
   progressRow: {
     flexDirection: 'row',

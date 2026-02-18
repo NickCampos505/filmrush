@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { WatchButton } from '@/components/watch-button';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const POSTER_HEIGHT = SCREEN_HEIGHT * 0.58;
@@ -21,6 +22,7 @@ const MOVIE_POSTER_URL = 'https://www.figma.com/api/mcp/asset/12cc8765-1d63-4ef2
 export default function MovieScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [watched, setWatched] = useState(false);
 
   return (
     <View style={styles.container}>
@@ -86,10 +88,7 @@ export default function MovieScreen() {
 
       {/* Mark as Watched Button */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 8 }]}>
-        <TouchableOpacity style={styles.watchedButton} activeOpacity={0.8}>
-          <Feather name="plus" size={24} color="white" />
-          <Text style={styles.watchedButtonText}>Mark as Watched</Text>
-        </TouchableOpacity>
+        <WatchButton watched={watched} onPress={() => setWatched(w => !w)} />
       </View>
     </View>
   );
@@ -183,22 +182,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#131316',
     paddingHorizontal: 16,
     paddingTop: 12,
-  },
-  watchedButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#3f3f46',
-    borderRadius: 144,
-    paddingVertical: 12,
-    paddingRight: 16,
-  },
-  watchedButtonText: {
-    fontSize: 14,
-    fontFamily: 'Gabarito_600SemiBold',
-    color: '#ffffff',
-    lineHeight: 14 * 1.15,
   },
 });
