@@ -1,98 +1,311 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  FlatList,
+  Dimensions,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const H_PAD = 16;
+const CARD_GAP = 16;
+const CARD_WIDTH = (SCREEN_WIDTH - H_PAD * 2 - CARD_GAP) / 2;
+const CARD_HEIGHT = CARD_WIDTH * (266 / 177);
+
+// Figma asset URLs
+const LOGO_URL = 'https://www.figma.com/api/mcp/asset/8a6e877a-4108-4f03-b78b-bb0beadca5ce';
+const CARD_IMAGE_URL = 'https://www.figma.com/api/mcp/asset/033e71b8-cf4d-46e1-813e-334afe8f1e73';
+
+const CATEGORIES = [
+  'All Categories',
+  'Best Movie',
+  'Best Director',
+  'Best Actor',
+  'Best Screenplay',
+  'Best Photography',
+];
+
+type Movie = {
+  id: string;
+  title: string;
+  nominations: number;
+};
+
+const MOVIES: Movie[] = [
+  { id: '1', title: 'The Secret Agent', nominations: 5 },
+  { id: '2', title: 'The Secret Agent', nominations: 3 },
+  { id: '3', title: 'The Secret Agent', nominations: 7 },
+  { id: '4', title: 'The Secret Agent', nominations: 4 },
+  { id: '5', title: 'The Secret Agent', nominations: 2 },
+  { id: '6', title: 'The Secret Agent', nominations: 6 },
+  { id: '7', title: 'The Secret Agent', nominations: 8 },
+];
+
+const WATCHED_COUNT = 7;
+const TOTAL_MOVIES = 20;
+const WATCHED_PERCENT = Math.round((WATCHED_COUNT / TOTAL_MOVIES) * 100);
+
+function MovieCard({ item }: { item: Movie }) {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardImageWrap}>
+        <Image source={{ uri: CARD_IMAGE_URL }} style={styles.cardImage} resizeMode="cover" />
+        <TouchableOpacity style={styles.eyeBtn} activeOpacity={0.8}>
+          <Feather name="eye" size={20} color="white" />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.cardInfo}>
+        <Text style={styles.cardTitle}>{item.title}</Text>
+        <Text style={styles.cardNominations}>{item.nominations} Nominations</Text>
+      </View>
+    </View>
+  );
+}
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const insets = useSafeAreaInsets();
+  const [activeCategory, setActiveCategory] = useState('All Categories');
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const ListHeader = (
+    <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+      {/* Logo + Points */}
+      <View style={styles.headerRow}>
+        <Image source={{ uri: LOGO_URL }} style={styles.logo} resizeMode="contain" />
+        <View style={styles.pointsRow}>
+          <View style={styles.pointsBadge}>
+            <Text style={styles.pointsText}>10 Pts.</Text>
+          </View>
+          <TouchableOpacity style={styles.userBtn} activeOpacity={0.7}>
+            <Feather name="user" size={24} color="#d4d4d8" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Categories */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.categoriesContent}
+      >
+        {CATEGORIES.map((cat) => (
+          <TouchableOpacity
+            key={cat}
+            onPress={() => setActiveCategory(cat)}
+            style={[styles.tag, cat === activeCategory ? styles.tagActive : styles.tagDefault]}
+            activeOpacity={0.8}
+          >
+            <Text
+              style={[
+                styles.tagLabel,
+                cat === activeCategory ? styles.tagLabelActive : styles.tagLabelDefault,
+              ]}
+            >
+              {cat}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* Progress */}
+      <View style={styles.progressRow}>
+        <Text style={styles.progressLabel}>{WATCHED_PERCENT}% Watched</Text>
+        <View style={styles.progressTrack}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${(WATCHED_COUNT / TOTAL_MOVIES) * 100}%` as any },
+            ]}
+          />
+        </View>
+        <View style={styles.moviesCount}>
+          <Text style={styles.moviesCountBold}>{WATCHED_COUNT}</Text>
+          <Text style={styles.moviesCountLight}>/20 Movies</Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={MOVIES}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        ListHeaderComponent={() => ListHeader}
+        columnWrapperStyle={styles.row}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) => <MovieCard item={item} />}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#131316',
+  },
+
+  // Header
+  header: {
+    paddingHorizontal: H_PAD,
+    marginBottom: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  logo: {
+    width: 160,
+    height: 32,
+  },
+  pointsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  stepContainer: {
+  pointsBadge: {
+    backgroundColor: 'rgba(0, 255, 135, 0.1)',
+    borderRadius: 144,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  pointsText: {
+    color: '#00ff87',
+    fontSize: 16,
+    fontFamily: 'Gabarito_500Medium',
+  },
+  userBtn: {
+    padding: 8,
+  },
+
+  // Categories
+  categoriesContent: {
+    flexDirection: 'row',
     gap: 8,
+    paddingTop: 16,
+    paddingBottom: 8,
+    paddingRight: H_PAD,
+  },
+  tag: {
+    borderRadius: 144,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+  },
+  tagActive: {
+    backgroundColor: 'white',
+    borderColor: '#1d1d20',
+  },
+  tagDefault: {
+    backgroundColor: 'transparent',
+    borderColor: '#3f3f46',
+  },
+  tagLabel: {
+    fontSize: 16,
+  },
+  tagLabelActive: {
+    color: '#000',
+    fontFamily: 'Gabarito_600SemiBold',
+  },
+  tagLabelDefault: {
+    color: '#d4d4d8',
+    fontFamily: 'Gabarito_400Regular',
+  },
+
+  // Progress
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 16,
+  },
+  progressLabel: {
+    fontSize: 14,
+    color: '#d4d4d8',
+    fontFamily: 'Gabarito_600SemiBold',
+  },
+  progressTrack: {
+    flex: 1,
+    height: 14,
+    backgroundColor: '#1d1d20',
+    borderRadius: 144,
+    borderWidth: 1,
+    borderColor: '#71717a',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: 'white',
+    borderRadius: 144,
+  },
+  moviesCount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  moviesCountBold: {
+    fontSize: 14,
+    color: '#ffffff',
+    fontFamily: 'Gabarito_600SemiBold',
+  },
+  moviesCountLight: {
+    fontSize: 14,
+    color: '#d4d4d8',
+    fontFamily: 'Gabarito_400Regular',
+  },
+
+  // List
+  listContent: {
+    paddingHorizontal: H_PAD,
+  },
+  row: {
+    gap: CARD_GAP,
+    marginBottom: CARD_GAP,
+  },
+
+  // Card
+  card: {
+    width: CARD_WIDTH,
+  },
+  cardImageWrap: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: 12,
+    overflow: 'hidden',
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  cardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  eyeBtn: {
     position: 'absolute',
+    top: 4,
+    right: 4,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  cardInfo: {
+    gap: 4,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontFamily: 'Gabarito_600SemiBold',
+    color: '#ffffff',
+  },
+  cardNominations: {
+    fontSize: 14,
+    fontFamily: 'Gabarito_400Regular',
+    color: '#d4d4d8',
   },
 });
