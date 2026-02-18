@@ -10,6 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -56,9 +57,9 @@ const WATCHED_COUNT = 7;
 const TOTAL_MOVIES = 20;
 const WATCHED_PERCENT = Math.round((WATCHED_COUNT / TOTAL_MOVIES) * 100);
 
-function MovieCard({ item }: { item: Movie }) {
+function MovieCard({ item, onPress }: { item: Movie; onPress: () => void }) {
   return (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
       <View style={styles.cardImageWrap}>
         <Image source={{ uri: CARD_IMAGE_URL }} style={styles.cardImage} resizeMode="cover" />
         <TouchableOpacity style={styles.eyeBtn} activeOpacity={0.8}>
@@ -69,12 +70,13 @@ function MovieCard({ item }: { item: Movie }) {
         <Text style={styles.cardTitle}>{item.title}</Text>
         <Text style={styles.cardNominations}>{item.nominations} Nominations</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [activeCategory, setActiveCategory] = useState('All Categories');
 
   const ListHeader = (
@@ -148,7 +150,9 @@ export default function HomeScreen() {
         columnWrapperStyle={styles.row}
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => <MovieCard item={item} />}
+        renderItem={({ item }) => (
+          <MovieCard item={item} onPress={() => router.push('/movie')} />
+        )}
       />
     </View>
   );
