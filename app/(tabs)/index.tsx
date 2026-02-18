@@ -13,6 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Tag } from '@/components/tag';
+import { CATEGORY_FILTERS, CategoryKey, Film, FILMS } from '@/data/films';
+import { useFilmStore } from '@/context/film-store';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const H_PAD = 16;
@@ -20,68 +22,28 @@ const CARD_GAP = 16;
 const CARD_WIDTH = (SCREEN_WIDTH - H_PAD * 2 - CARD_GAP) / 2;
 const CARD_HEIGHT = CARD_WIDTH * (266 / 177);
 
-// Assets
 const LOGO = require('@/assets/images/splash.png');
-// splash.png: 1284×2778 — logo centered at ~55% height
-// Scaled to container width 200: height = 200 * (2778/1284) ≈ 433px, logo at ≈238px
 const LOGO_IMG_H = Math.round(200 * (2778 / 1284));
 const LOGO_CROP_TOP = -(Math.round(LOGO_IMG_H * 0.55) - 22);
 
-const CARD_IMAGE_URL = 'https://www.figma.com/api/mcp/asset/033e71b8-cf4d-46e1-813e-334afe8f1e73';
+function MovieCard({ item, onPress }: { item: Film; onPress: () => void }) {
+  const { watchedIds } = useFilmStore();
+  const watched = watchedIds.has(item.id);
 
-const CATEGORIES = [
-  'All Categories',
-  'Best Movie',
-  'Best Director',
-  'Best Actor',
-  'Best Screenplay',
-  'Best Photography',
-];
-
-type Movie = {
-  id: string;
-  title: string;
-  nominations: number;
-  watched: boolean;
-};
-
-const MOVIES: Movie[] = [
-  { id: '1', title: 'The Secret Agent', nominations: 5, watched: false },
-  { id: '2', title: 'The Secret Agent', nominations: 3, watched: true },
-  { id: '3', title: 'The Secret Agent', nominations: 7, watched: false },
-  { id: '4', title: 'The Secret Agent', nominations: 4, watched: true },
-  { id: '5', title: 'The Secret Agent', nominations: 2, watched: false },
-  { id: '6', title: 'The Secret Agent', nominations: 6, watched: false },
-  { id: '7', title: 'The Secret Agent', nominations: 8, watched: false },
-];
-
-const WATCHED_COUNT = 7;
-const TOTAL_MOVIES = 20;
-const WATCHED_PERCENT = Math.round((WATCHED_COUNT / TOTAL_MOVIES) * 100);
-
-function MovieCard({ item, onPress }: { item: Movie; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
       <View style={styles.cardImageWrap}>
-        {/* Poster */}
-        <Image source={{ uri: CARD_IMAGE_URL }} style={styles.cardImage} resizeMode="cover" />
+        <Image source={{ uri: item.poster }} style={styles.cardImage} resizeMode="cover" />
 
-        {/* Watched overlay */}
-        {item.watched && <View style={styles.cardOverlay} />}
+        {watched && <View style={styles.cardOverlay} />}
 
-        {/* Eye / Check icon — top right */}
         <View style={styles.cardIconBtn}>
-          <Feather
-            name={item.watched ? 'check-circle' : 'eye'}
-            size={20}
-            color="white"
-          />
+          <Feather name={watched ? 'check-circle' : 'eye'} size={20} color="white" />
         </View>
 
-        {/* +10 Pts. tag — top left, only visible when watched */}
-        {item.watched && (
+        {watched && (
           <View style={styles.pointsTag}>
-            <Text style={styles.pointsTagText}>+10 Pts.</Text>
+            <Text style={styles.pointsTagText}>+{item.points} Pts.</Text>
           </View>
         )}
       </View>
@@ -97,7 +59,15 @@ function MovieCard({ item, onPress }: { item: Movie; onPress: () => void }) {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [activeCategory, setActiveCategory] = useState('All Categories');
+  const [activeCategory, setActiveCategory] = useState<'all' | CategoryKey>('all');
+  const { totalPoints, watchedCount } = useFilmStore();
+
+  const filteredFilms =
+    activeCategory === 'all'
+      ? FILMS
+      : FILMS.filter((f) => f.categories.includes(activeCategory));
+
+  const watchedPercent = Math.round((watchedCount / FILMS.length) * 100);
 
   const ListHeader = (
     <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -108,9 +78,13 @@ export default function HomeScreen() {
         </View>
         <View style={styles.pointsRow}>
           <View style={styles.pointsBadge}>
-            <Text style={styles.pointsText}>10 Pts.</Text>
+            <Text style={styles.pointsText}>{totalPoints} Pts.</Text>
           </View>
-          <TouchableOpacity style={styles.userBtn} activeOpacity={0.7} onPress={() => router.push('/profile')}>
+          <TouchableOpacity
+            style={styles.userBtn}
+            activeOpacity={0.7}
+            onPress={() => router.push('/profile')}
+          >
             <Feather name="user" size={24} color="#d4d4d8" />
           </TouchableOpacity>
         </View>
@@ -122,30 +96,30 @@ export default function HomeScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.categoriesContent}
       >
-        {CATEGORIES.map((cat) => (
+        {CATEGORY_FILTERS.map(({ key, label }) => (
           <Tag
-            key={cat}
-            label={cat}
-            active={cat === activeCategory}
-            onPress={() => setActiveCategory(cat)}
+            key={key}
+            label={label}
+            active={key === activeCategory}
+            onPress={() => setActiveCategory(key)}
           />
         ))}
       </ScrollView>
 
       {/* Progress */}
       <View style={styles.progressRow}>
-        <Text style={styles.progressLabel}>{WATCHED_PERCENT}% Watched</Text>
+        <Text style={styles.progressLabel}>{watchedPercent}% Watched</Text>
         <View style={styles.progressTrack}>
           <View
             style={[
               styles.progressFill,
-              { width: `${(WATCHED_COUNT / TOTAL_MOVIES) * 100}%` as any },
+              { width: `${(watchedCount / FILMS.length) * 100}%` as any },
             ]}
           />
         </View>
         <View style={styles.moviesCount}>
-          <Text style={styles.moviesCountBold}>{WATCHED_COUNT}</Text>
-          <Text style={styles.moviesCountLight}>/20 Movies</Text>
+          <Text style={styles.moviesCountBold}>{watchedCount}</Text>
+          <Text style={styles.moviesCountLight}>/{FILMS.length} Movies</Text>
         </View>
       </View>
     </View>
@@ -154,7 +128,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <FlatList
-        data={MOVIES}
+        data={filteredFilms}
         keyExtractor={(item) => item.id}
         numColumns={2}
         ListHeaderComponent={() => ListHeader}
@@ -162,7 +136,10 @@ export default function HomeScreen() {
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <MovieCard item={item} onPress={() => router.push('/movie')} />
+          <MovieCard
+            item={item}
+            onPress={() => router.push({ pathname: '/movie', params: { id: item.id } })}
+          />
         )}
       />
     </View>
@@ -226,6 +203,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     paddingRight: H_PAD,
   },
+
   // Progress
   progressRow: {
     flexDirection: 'row',

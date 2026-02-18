@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,20 +9,24 @@ import {
   Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { WatchButton } from '@/components/watch-button';
+import { FILMS } from '@/data/films';
+import { useFilmStore } from '@/context/film-store';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const POSTER_HEIGHT = SCREEN_HEIGHT * 0.58;
 
-// Figma asset URL (temporary — replace with real asset)
-const MOVIE_POSTER_URL = 'https://www.figma.com/api/mcp/asset/12cc8765-1d63-4ef2-b75d-79074c293545';
-
 export default function MovieScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [watched, setWatched] = useState(false);
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const film = FILMS.find((f) => f.id === id);
+  const { watchedIds, toggleWatched } = useFilmStore();
+  const watched = !!film && watchedIds.has(film.id);
+
+  if (!film) return null;
 
   return (
     <View style={styles.container}>
@@ -33,7 +37,7 @@ export default function MovieScreen() {
       >
         {/* Movie Poster */}
         <Image
-          source={{ uri: MOVIE_POSTER_URL }}
+          source={{ uri: film.poster }}
           style={[styles.poster, { height: POSTER_HEIGHT }]}
           resizeMode="cover"
         />
@@ -41,38 +45,36 @@ export default function MovieScreen() {
         {/* Movie Info */}
         <View style={styles.infoContainer}>
           {/* Title */}
-          <Text style={styles.title}>The Secret Agent</Text>
+          <Text style={styles.title}>{film.title}</Text>
 
           {/* Nominations + Genre + Director */}
           <View style={styles.detailsSection}>
             <View style={styles.nominationsGenreRow}>
               <View style={styles.inlineRow}>
-                <Text style={styles.valueText}>5 </Text>
+                <Text style={styles.valueText}>{film.nominations} </Text>
                 <Text style={styles.labelText}>Nominations</Text>
               </View>
               <View style={styles.inlineRow}>
                 <Text style={styles.labelText}>Genre: </Text>
-                <Text style={styles.valueText}>{'Thriller'}</Text>
+                <Text style={styles.valueText}>{film.genre}</Text>
               </View>
             </View>
             <View style={styles.inlineRow}>
               <Text style={styles.labelText}>Directed by: </Text>
-              <Text style={styles.valueText}>{'Alfred Hitchcock'}</Text>
+              <Text style={styles.valueText}>{film.director}</Text>
             </View>
           </View>
 
           {/* Where to Watch */}
           <View style={styles.inlineRow}>
             <Text style={styles.labelText}>Where to Watch: </Text>
-            <Text style={styles.valueText}>{'Netflix'}</Text>
+            <Text style={styles.valueText}>{film.streamingOn}</Text>
           </View>
 
           {/* Synopsis */}
           <View style={styles.synopsisSection}>
             <Text style={styles.synopsisLabel}>Synopsis:</Text>
-            <Text style={styles.synopsisText}>
-              {`Lorem ipsum dolor sit amet consectetur. Sapien sodales eu a ornare sagittis. Pulvinar tortor nec fermentum tristique molestie duis risus morbi. Integer eget vitae arcu posuere convallis nibh faucibus. Aliquam lectus faucibus volutpat vestibulum eget rutrum. Mattis leo amet elementum porttitor amet est in tellus. Cursus volutpat convallis est at. Turpis sed amet purus tincidunt nisi arcu quis vitae eleifend.`}
-            </Text>
+            <Text style={styles.synopsisText}>{film.synopsis}</Text>
           </View>
         </View>
       </ScrollView>
@@ -88,7 +90,7 @@ export default function MovieScreen() {
 
       {/* Mark as Watched Button */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 8 }]}>
-        <WatchButton watched={watched} onPress={() => setWatched(w => !w)} />
+        <WatchButton watched={watched} onPress={() => toggleWatched(film.id)} />
       </View>
     </View>
   );

@@ -9,10 +9,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-
-const WATCHED_COUNT = 7;
-const TOTAL_MOVIES = 20;
-const WATCHED_PERCENT = Math.round((WATCHED_COUNT / TOTAL_MOVIES) * 100);
+import { FILMS } from '@/data/films';
+import { useFilmStore } from '@/context/film-store';
 
 type OptionRowProps = {
   icon: React.ComponentProps<typeof Feather>['name'];
@@ -41,6 +39,8 @@ function OptionRow({ icon, label, dimmed = false, badge, onPress }: OptionRowPro
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { totalPoints, watchedCount } = useFilmStore();
+  const watchedPercent = Math.round((watchedCount / FILMS.length) * 100);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -63,7 +63,7 @@ export default function ProfileScreen() {
             <Feather name="award" size={24} color="#ffffff" />
             <Text style={styles.progressTitle}>Progress</Text>
             <View style={styles.pointsBadge}>
-              <Text style={styles.pointsText}>10 Pts.</Text>
+              <Text style={styles.pointsText}>{totalPoints} Pts.</Text>
             </View>
           </View>
 
@@ -73,7 +73,7 @@ export default function ProfileScreen() {
               <View
                 style={[
                   styles.progressFill,
-                  { width: `${(WATCHED_COUNT / TOTAL_MOVIES) * 100}%` as any },
+                  { width: `${(watchedCount / FILMS.length) * 100}%` as any },
                 ]}
               />
             </View>
@@ -82,12 +82,12 @@ export default function ProfileScreen() {
           {/* Stats */}
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{WATCHED_PERCENT}%</Text>
+              <Text style={styles.statValue}>{watchedPercent}%</Text>
               <Text style={styles.statLabel}>Watched</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{WATCHED_COUNT}</Text>
-              <Text style={styles.statLabel}>/20 Movies</Text>
+              <Text style={styles.statValue}>{watchedCount}</Text>
+              <Text style={styles.statLabel}>/{FILMS.length} Movies</Text>
             </View>
           </View>
         </View>
