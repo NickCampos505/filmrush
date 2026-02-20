@@ -3,27 +3,48 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
+  Share,
+  Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
 import { FILMS } from '@/data/films';
 import { useFilmStore } from '@/context/film-store';
+import { AnimatedPressable } from '@/components/animated-pressable';
+
+const CHEVRON_LEFT_ICON = require('@/assets/images/chevron-left.svg');
+const AWARD_ICON = require('@/assets/images/award.svg');
+const TROPHY_ICON = require('@/assets/images/trophy.svg');
+const EXPORT_ICON = require('@/assets/images/export.svg');
+const INFO_ICON = require('@/assets/images/info.svg');
+const FILE_ICON = require('@/assets/images/file.svg');
 
 type OptionRowProps = {
-  icon: React.ComponentProps<typeof Feather>['name'];
+  iconSource: number;
   label: string;
   dimmed?: boolean;
   badge?: string;
   onPress?: () => void;
 };
 
-function OptionRow({ icon, label, dimmed = false, badge, onPress }: OptionRowProps) {
+function OptionRow({ iconSource, label, dimmed = false, badge, onPress }: OptionRowProps) {
   return (
-    <TouchableOpacity style={styles.optionRow} onPress={onPress} activeOpacity={0.7}>
-      <Feather name={icon} size={24} color={dimmed ? '#a1a1aa' : '#ffffff'} />
+    <AnimatedPressable
+      style={styles.optionRow}
+      onPress={onPress}
+      pressedScale={0.98}
+      disabled={!onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !onPress }}
+    >
+      <Image
+        source={iconSource}
+        style={[styles.optionIcon, dimmed && styles.optionIconDim]}
+        contentFit="contain"
+      />
       <View style={styles.optionContent}>
         <Text style={[styles.optionLabel, dimmed && styles.optionLabelDim]}>{label}</Text>
         {badge && (
@@ -32,7 +53,7 @@ function OptionRow({ icon, label, dimmed = false, badge, onPress }: OptionRowPro
           </View>
         )}
       </View>
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 }
 
@@ -42,13 +63,30 @@ export default function ProfileScreen() {
   const { totalPoints, watchedCount } = useFilmStore();
   const watchedPercent = Math.round((watchedCount / FILMS.length) * 100);
 
+  async function handleShareWithFriends() {
+    try {
+      await Share.share({
+        message:
+          "I'm tracking this year's Oscar nominees on FilmRush. Join me and let's see who watches the most!",
+      });
+    } catch {
+      Alert.alert('Share unavailable', 'Could not open the share sheet right now. Please try again.');
+    }
+  }
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
-          <Feather name="chevron-left" size={28} color="white" />
-        </TouchableOpacity>
+        <AnimatedPressable
+          style={styles.backButton}
+          onPress={() => router.back()}
+          pressedScale={0.9}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <Image source={CHEVRON_LEFT_ICON} style={styles.backIcon} contentFit="contain" />
+        </AnimatedPressable>
         <Text style={styles.headerTitle}>My Profile</Text>
       </View>
 
@@ -60,8 +98,8 @@ export default function ProfileScreen() {
         <View style={styles.progressSection}>
           {/* Progress Header */}
           <View style={styles.progressHeader}>
-            <Feather name="award" size={24} color="#ffffff" />
-            <Text style={styles.progressTitle}>Progress</Text>
+            <Image source={TROPHY_ICON} style={styles.progressIcon} contentFit="contain" />
+            <Text style={styles.progressTitle}>Achievements</Text>
             <View style={styles.pointsBadge}>
               <Text style={styles.pointsText}>{totalPoints} Pts.</Text>
             </View>
@@ -94,10 +132,10 @@ export default function ProfileScreen() {
 
         {/* Options Section */}
         <View style={styles.optionsSection}>
-          <OptionRow icon="award" label="Badges" dimmed badge="Soon" />
-          <OptionRow icon="upload" label="Share With Friends" />
-          <OptionRow icon="info" label="About" onPress={() => router.push('/about')} />
-          <OptionRow icon="file-text" label="Privacy Policy" onPress={() => router.push('/privacy')} />
+          <OptionRow iconSource={AWARD_ICON} label="Badges" dimmed badge="Soon" />
+          <OptionRow iconSource={EXPORT_ICON} label="Share With Friends" onPress={handleShareWithFriends} />
+          <OptionRow iconSource={INFO_ICON} label="About" onPress={() => router.push('/about')} />
+          <OptionRow iconSource={FILE_ICON} label="Privacy Policy" onPress={() => router.push('/privacy')} />
         </View>
       </ScrollView>
     </View>
@@ -110,6 +148,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#131316',
   },
   scrollContent: {
+    paddingTop: 16,
     gap: 16,
   },
 
@@ -120,15 +159,20 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingHorizontal: 16,
     paddingVertical: 8,
+    minHeight: 56,
   },
   backButton: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: 144,
     borderWidth: 1.2,
     borderColor: '#3f3f46',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
   },
   headerTitle: {
     fontSize: 18,
@@ -141,7 +185,7 @@ const styles = StyleSheet.create({
   progressSection: {
     backgroundColor: '#1d1d20',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 8,
     paddingBottom: 24,
   },
   progressHeader: {
@@ -150,12 +194,16 @@ const styles = StyleSheet.create({
     gap: 16,
     padding: 16,
   },
+  progressIcon: {
+    width: 24,
+    height: 24,
+  },
   progressTitle: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'Gabarito_600SemiBold',
     color: '#ffffff',
-    lineHeight: 16 * 1.5,
+    lineHeight: 18 * 1.35,
   },
   pointsBadge: {
     backgroundColor: 'rgba(0, 255, 135, 0.1)',
@@ -184,7 +232,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: 'white',
+    backgroundColor: '#00ff87',
     borderRadius: 144,
   },
 
@@ -225,6 +273,13 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingHorizontal: 16,
     paddingVertical: 16,
+  },
+  optionIcon: {
+    width: 24,
+    height: 24,
+  },
+  optionIconDim: {
+    opacity: 0.65,
   },
   optionContent: {
     flex: 1,

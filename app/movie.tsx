@@ -3,20 +3,20 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
-  Image,
   Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
 import { WatchButton } from '@/components/watch-button';
 import { FILMS } from '@/data/films';
 import { useFilmStore } from '@/context/film-store';
+import { AnimatedPressable } from '@/components/animated-pressable';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const POSTER_HEIGHT = SCREEN_HEIGHT * 0.58;
+const CHEVRON_LEFT_ICON = require('@/assets/images/chevron-left.svg');
 
 export default function MovieScreen() {
   const router = useRouter();
@@ -39,36 +39,40 @@ export default function MovieScreen() {
         <Image
           source={film.poster}
           style={[styles.poster, { height: POSTER_HEIGHT }]}
-          resizeMode="cover"
+          contentFit="cover"
         />
 
         {/* Movie Info */}
         <View style={styles.infoContainer}>
           {/* Title */}
-          <Text style={styles.title}>{film.title}</Text>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>{film.title}</Text>
+          </View>
 
-          {/* Nominations + Genre + Director */}
-          <View style={styles.detailsSection}>
-            <View style={styles.nominationsGenreRow}>
-              <View style={styles.inlineRow}>
-                <Text style={styles.valueText}>{film.nominations} </Text>
-                <Text style={styles.labelText}>Nominations</Text>
+          {/* Details */}
+          <View style={styles.detailsContainer}>
+            <View style={styles.nominationsRow}>
+              <Text style={styles.valueText}>{film.nominations}</Text>
+              <Text style={styles.labelText}>Nominations</Text>
+            </View>
+
+            <View style={styles.directorGenreRow}>
+              <View style={styles.directorContainer}>
+                <Text style={styles.labelText}>Directed by:</Text>
+                <Text style={styles.valueText}>{film.director}</Text>
               </View>
-              <View style={styles.inlineRow}>
-                <Text style={styles.labelText}>Genre: </Text>
+              <View style={styles.genreContainer}>
+                <Text style={styles.labelText}>Genre:</Text>
                 <Text style={styles.valueText}>{film.genre}</Text>
               </View>
             </View>
-            <View style={styles.inlineRow}>
-              <Text style={styles.labelText}>Directed by: </Text>
-              <Text style={styles.valueText}>{film.director}</Text>
-            </View>
-          </View>
 
-          {/* Where to Watch */}
-          <View style={styles.inlineRow}>
-            <Text style={styles.labelText}>Where to Watch: </Text>
-            <Text style={styles.valueText}>{film.streamingOn}</Text>
+            <View style={styles.streamingContainer}>
+              <View style={styles.streamingRow}>
+                <Text style={styles.labelText}>Where to Watch:</Text>
+                <Text style={styles.valueText}>{film.streamingOn}</Text>
+              </View>
+            </View>
           </View>
 
           {/* Synopsis */}
@@ -80,13 +84,23 @@ export default function MovieScreen() {
       </ScrollView>
 
       {/* Back Button */}
-      <TouchableOpacity
+      <AnimatedPressable
         style={[styles.backButton, { top: insets.top + 12 }]}
         onPress={() => router.back()}
-        activeOpacity={0.8}
+        pressedScale={0.9}
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
       >
-        <Feather name="chevron-left" size={28} color="white" />
-      </TouchableOpacity>
+        <View style={styles.controlBlurOverlay} />
+        <Image source={CHEVRON_LEFT_ICON} style={styles.backIcon} contentFit="contain" />
+      </AnimatedPressable>
+
+      {watched && (
+        <View style={[styles.watchedPointsTag, { top: insets.top + 12 }]}>
+          <View style={styles.controlBlurOverlay} />
+          <Text style={styles.watchedPointsText}>+{film.points} Pts.</Text>
+        </View>
+      )}
 
       {/* Mark as Watched Button */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 8 }]}>
@@ -109,58 +123,81 @@ const styles = StyleSheet.create({
 
   // Info section
   infoContainer: {
-    paddingHorizontal: 16,
     paddingVertical: 24,
     gap: 16,
   },
+  titleContainer: {
+    paddingHorizontal: 16,
+  },
   title: {
     fontSize: 24,
+    lineHeight: 24,
     fontFamily: 'Gabarito_600SemiBold',
     color: '#ffffff',
   },
 
   // Details
-  detailsSection: {
-    gap: 8,
+  detailsContainer: {
+    paddingHorizontal: 16,
+    gap: 16,
   },
-  nominationsGenreRow: {
+  nominationsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 2,
   },
-  inlineRow: {
+  directorGenreRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  directorContainer: {
+    flex: 1,
+    gap: 2,
+    alignItems: 'flex-start',
+  },
+  genreContainer: {
+    flex: 1,
+    gap: 2,
+    alignItems: 'flex-end',
+  },
+  streamingContainer: {
+    gap: 4,
+  },
+  streamingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
   labelText: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Gabarito_400Regular',
     color: '#d4d4d8',
-    lineHeight: 14 * 1.15,
+    lineHeight: 24,
   },
   valueText: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Gabarito_600SemiBold',
     color: '#f4f4f5',
-    lineHeight: 14 * 1.15,
+    lineHeight: 24,
   },
 
   // Synopsis
   synopsisSection: {
+    paddingHorizontal: 16,
     gap: 4,
   },
   synopsisLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Gabarito_600SemiBold',
     color: '#f4f4f5',
-    lineHeight: 14 * 1.15,
+    lineHeight: 24,
   },
   synopsisText: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Gabarito_400Regular',
     color: '#a1a1aa',
-    lineHeight: 14 * 1.7,
+    lineHeight: 24,
   },
 
   // Back button
@@ -170,9 +207,33 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 144,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  controlBlurOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  backIcon: {
+    width: 28,
+    height: 28,
+  },
+  watchedPointsTag: {
+    position: 'absolute',
+    right: 16,
+    minHeight: 48,
+    paddingHorizontal: 12,
+    borderRadius: 144,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  watchedPointsText: {
+    fontSize: 16,
+    lineHeight: 16,
+    fontFamily: 'Gabarito_600SemiBold',
+    color: '#00ff87',
   },
 
   // Bottom bar

@@ -1,6 +1,9 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
+
+const PLUS_ICON = require('@/assets/images/plus.svg');
+const CHECK_ICON = require('@/assets/images/check.svg');
 
 type WatchButtonProps = {
   watched: boolean;
@@ -9,11 +12,19 @@ type WatchButtonProps = {
 
 export function WatchButton({ watched, onPress }: WatchButtonProps) {
   return (
-    <TouchableOpacity style={styles.button} onPress={onPress} activeOpacity={0.8}>
-      <Feather
-        name={watched ? 'check' : 'plus'}
-        size={24}
-        color={watched ? '#00ff87' : '#ffffff'}
+    <TouchableOpacity
+      style={styles.button}
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={watched ? 'Unmark movie as watched' : 'Mark movie as watched'}
+      accessibilityState={{ checked: watched }}
+      hitSlop={6}
+    >
+      <Image
+        source={watched ? CHECK_ICON : PLUS_ICON}
+        style={styles.icon}
+        contentFit="contain"
       />
       <Text style={[styles.label, watched && styles.labelWatched]}>
         {watched ? 'Watched' : 'Mark as Watched'}
@@ -33,6 +44,10 @@ const styles = StyleSheet.create({
     borderRadius: 144,
     paddingVertical: 12,
     paddingHorizontal: 16,
+  },
+  icon: {
+    width: 24,
+    height: 24,
   },
   label: {
     fontSize: 14,

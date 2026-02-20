@@ -1,17 +1,44 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TouchableWithoutFeedback, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { MOTION_DURATION_FAST, MOTION_DURATION_SLOW, MOTION_EASING_STANDARD } from '@/constants/motion';
 
 export default function PrivacyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [closing, setClosing] = useState(false);
+  const overlayOpacity = useSharedValue(0);
+  const sheetTranslateY = useSharedValue(24);
+
+  useEffect(() => {
+    overlayOpacity.value = withTiming(1, { duration: MOTION_DURATION_SLOW, easing: MOTION_EASING_STANDARD });
+    sheetTranslateY.value = withTiming(0, { duration: MOTION_DURATION_SLOW, easing: MOTION_EASING_STANDARD });
+  }, [overlayOpacity, sheetTranslateY]);
+
+  const overlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacity.value,
+  }));
+
+  const sheetAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: sheetTranslateY.value }],
+  }));
+
+  const closeModal = useCallback(() => {
+    if (closing) return;
+    setClosing(true);
+    overlayOpacity.value = withTiming(0, { duration: MOTION_DURATION_FAST, easing: MOTION_EASING_STANDARD });
+    sheetTranslateY.value = withTiming(24, { duration: MOTION_DURATION_FAST, easing: MOTION_EASING_STANDARD }, (finished) => {
+      if (finished) runOnJS(router.back)();
+    });
+  }, [closing, overlayOpacity, router, sheetTranslateY]);
 
   return (
-    <TouchableWithoutFeedback onPress={() => router.back()}>
-      <View style={styles.overlay}>
+    <TouchableWithoutFeedback onPress={closeModal}>
+      <Animated.View style={[styles.overlay, overlayAnimatedStyle]}>
         <TouchableWithoutFeedback>
-          <View style={[styles.sheet, { paddingBottom: 32 + insets.bottom }]}>
+          <Animated.View style={[styles.sheet, sheetAnimatedStyle, { paddingBottom: 32 + insets.bottom }]}>
             <View style={styles.grabber} />
             <View style={styles.content}>
               <Text style={styles.title}>Privacy Policy</Text>
@@ -19,9 +46,9 @@ export default function PrivacyScreen() {
                 Filmrush does not collect or share personal data with third parties. All your watch history is stored locally on your device. We do not use tracking, analytics, or advertising SDKs. Your data is yours — always.
               </Text>
             </View>
-          </View>
+          </Animated.View>
         </TouchableWithoutFeedback>
-      </View>
+      </Animated.View>
     </TouchableWithoutFeedback>
   );
 }
@@ -58,9 +85,9 @@ const styles = StyleSheet.create({
     lineHeight: 18 * 1.35,
   },
   description: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Gabarito_400Regular',
     color: '#a1a1aa',
-    lineHeight: 14 * 1.7,
+    lineHeight: 24,
   },
 });

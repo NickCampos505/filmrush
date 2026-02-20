@@ -1,5 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
+import { AnimatedPressable } from '@/components/animated-pressable';
 
 type TagProps = {
   label: string;
@@ -9,24 +10,29 @@ type TagProps = {
 
 export function Tag({ label, active = false, onPress }: TagProps) {
   return (
-    <TouchableOpacity
+    <AnimatedPressable
       style={[styles.tag, active ? styles.tagActive : styles.tagDefault]}
       onPress={onPress}
-      activeOpacity={0.8}
+      pressedScale={0.96}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
     >
       <Text style={[styles.label, active ? styles.labelActive : styles.labelDefault]}>
         {label}
       </Text>
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
   tag: {
     borderRadius: 144,
+    minHeight: 44,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 0,
     borderWidth: 1,
+    justifyContent: 'center',
   },
   tagDefault: {
     backgroundColor: 'transparent',
@@ -39,6 +45,8 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     lineHeight: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   labelDefault: {
     color: '#d4d4d8',

@@ -1,20 +1,21 @@
-import React, { useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
-  Image,
   FlatList,
   Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
 import { Tag } from '@/components/tag';
 import { CATEGORY_FILTERS, CategoryKey, Film, FILMS } from '@/data/films';
 import { useFilmStore } from '@/context/film-store';
+import { AnimatedPressable } from '@/components/animated-pressable';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { MOTION_DURATION_SLOW, MOTION_EASING_STANDARD } from '@/constants/motion';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const H_PAD = 16;
@@ -22,71 +23,182 @@ const CARD_GAP = 16;
 const CARD_WIDTH = (SCREEN_WIDTH - H_PAD * 2 - CARD_GAP) / 2;
 const CARD_HEIGHT = CARD_WIDTH * (266 / 177);
 
-const LOGO = require('@/assets/images/splash.png');
-const LOGO_IMG_H = Math.round(200 * (2778 / 1284));
-const LOGO_CROP_TOP = -(Math.round(LOGO_IMG_H * 0.55) - 22);
+const LOGO = require('@/assets/images/logo.svg');
+const EYE_ICON = require('@/assets/images/eye.svg');
+const CHECK_CIRCLE_ICON = require('@/assets/images/check-circle.svg');
+const PROFILE_ICON = require('@/assets/images/user.svg');
+const EMPTY_STATE_ICON = require('@/assets/images/info.svg');
 
-function MovieCard({ item, onPress }: { item: Film; onPress: () => void }) {
-  const { watchedIds } = useFilmStore();
-  const watched = watchedIds.has(item.id);
+type MovieCardProps = {
+  item: Film;
+  watched: boolean;
+  onOpenMovie: (id: string) => void;
+  onToggleWatched: (id: string) => void;
+};
+
+const MovieCard = memo(function MovieCard({
+  item,
+  watched,
+  onOpenMovie,
+  onToggleWatched,
+}: MovieCardProps) {
+  const watchedProgress = useSharedValue(watched ? 1 : 0);
+
+  useEffect(() => {
+    watchedProgress.value = withTiming(watched ? 1 : 0, {
+      duration: MOTION_DURATION_SLOW,
+      easing: MOTION_EASING_STANDARD,
+    });
+  }, [watched, watchedProgress]);
+
+  const overlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: watchedProgress.value,
+  }));
+
+  const pointsTagAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: watchedProgress.value,
+    transform: [
+      { translateY: (1 - watchedProgress.value) * 8 },
+      { scale: 0.94 + watchedProgress.value * 0.06 },
+    ],
+  }));
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
+    <AnimatedPressable
+      style={styles.card}
+      onPress={() => onOpenMovie(item.id)}
+      pressedScale={0.98}
+      accessibilityRole="button"
+      accessibilityLabel={`Open details for ${item.title}`}
+    >
       <View style={styles.cardImageWrap}>
-        <Image source={item.poster} style={styles.cardImage} resizeMode="cover" />
+        <Image source={item.poster} style={styles.cardImage} contentFit="cover" />
 
-        {watched && <View style={styles.cardOverlay} />}
+        <Animated.View style={[styles.cardOverlay, overlayAnimatedStyle]} pointerEvents="none" />
 
-        <View style={styles.cardIconBtn}>
-          <Feather name={watched ? 'check-circle' : 'eye'} size={20} color="white" />
-        </View>
+        <AnimatedPressable
+          style={styles.cardIconBtn}
+          onPress={(event) => {
+            event.stopPropagation();
+            onToggleWatched(item.id);
+          }}
+          pressedScale={0.9}
+          hitSlop={4}
+          accessibilityRole="button"
+          accessibilityLabel={watched ? `Unmark ${item.title} as watched` : `Mark ${item.title} as watched`}
+          accessibilityState={{ checked: watched }}
+        >
+          <Image
+            source={watched ? CHECK_CIRCLE_ICON : EYE_ICON}
+            style={styles.cardIcon}
+            contentFit="contain"
+          />
+        </AnimatedPressable>
 
-        {watched && (
-          <View style={styles.pointsTag}>
+        <Animated.View style={[styles.pointsTag, pointsTagAnimatedStyle]} pointerEvents="none">
             <Text style={styles.pointsTagText}>+{item.points} Pts.</Text>
-          </View>
-        )}
+        </Animated.View>
       </View>
 
       <View style={styles.cardInfo}>
         <Text style={styles.cardTitle}>{item.title}</Text>
         <Text style={styles.cardNominations}>{item.nominations} Nominations</Text>
       </View>
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
-}
+});
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState<'all' | CategoryKey>('all');
-  const { totalPoints, watchedCount } = useFilmStore();
+  const { totalPoints, watchedIds, toggleWatched } = useFilmStore();
+  const progressTrackWidth = useSharedValue(0);
+  const progressFillWidth = useSharedValue(0);
 
-  const filteredFilms =
-    activeCategory === 'all'
-      ? FILMS
-      : FILMS.filter((f) => f.categories.includes(activeCategory));
+  const filteredFilms = useMemo(
+    () =>
+      activeCategory === 'all'
+        ? FILMS
+        : FILMS.filter((f) => f.categories.includes(activeCategory)),
+    [activeCategory]
+  );
 
-  const watchedPercent = Math.round((watchedCount / FILMS.length) * 100);
+  const watchedInCategory = filteredFilms.filter((film) => watchedIds.has(film.id)).length;
+  const totalInCategory = filteredFilms.length;
+  const watchedRatio = totalInCategory > 0 ? watchedInCategory / totalInCategory : 0;
+  const watchedPercent = Math.round(watchedRatio * 100);
+  const handleOpenMovie = useCallback(
+    (id: string) => router.push({ pathname: '/movie', params: { id } }),
+    [router]
+  );
+  const handleToggleWatched = useCallback((id: string) => toggleWatched(id), [toggleWatched]);
+  const keyExtractor = useCallback((item: Film) => item.id, []);
+  const renderMovieCard = useCallback(
+    ({ item }: { item: Film }) => (
+      <MovieCard
+        item={item}
+        watched={watchedIds.has(item.id)}
+        onOpenMovie={handleOpenMovie}
+        onToggleWatched={handleToggleWatched}
+      />
+    ),
+    [handleOpenMovie, handleToggleWatched, watchedIds]
+  );
+
+  useEffect(() => {
+    if (progressTrackWidth.value === 0) return;
+    progressFillWidth.value = withTiming(progressTrackWidth.value * watchedRatio, {
+      duration: MOTION_DURATION_SLOW,
+      easing: MOTION_EASING_STANDARD,
+    });
+  }, [watchedRatio, progressFillWidth, progressTrackWidth]);
+
+  const progressFillAnimatedStyle = useAnimatedStyle(() => ({
+    width: progressFillWidth.value,
+  }));
+
+  const ListEmpty = (
+    <View style={styles.emptyState}>
+      <Image source={EMPTY_STATE_ICON} style={styles.emptyStateIcon} contentFit="contain" />
+      <Text style={styles.emptyStateTitle}>No movies in this category yet</Text>
+      <Text style={styles.emptyStateDescription}>
+        Try another category or go back to all nominated films.
+      </Text>
+      {activeCategory !== 'all' && (
+        <AnimatedPressable
+          style={styles.emptyStateButton}
+          onPress={() => setActiveCategory('all')}
+          pressedScale={0.97}
+          accessibilityRole="button"
+          accessibilityLabel="Show all categories"
+        >
+          <Text style={styles.emptyStateButtonText}>Show All Categories</Text>
+        </AnimatedPressable>
+      )}
+    </View>
+  );
 
   const ListHeader = (
-    <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+    <View style={[styles.header, { paddingTop: insets.top }]}>
       {/* Logo + Points */}
       <View style={styles.headerRow}>
         <View style={styles.logoContainer}>
-          <Image source={LOGO} style={styles.logoImage} />
+          <Image source={LOGO} style={styles.logoImage} contentFit="contain" />
         </View>
         <View style={styles.pointsRow}>
           <View style={styles.pointsBadge}>
             <Text style={styles.pointsText}>{totalPoints} Pts.</Text>
           </View>
-          <TouchableOpacity
+          <AnimatedPressable
             style={styles.userBtn}
-            activeOpacity={0.7}
             onPress={() => router.push('/profile')}
+            pressedScale={0.9}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile"
           >
-            <Feather name="user" size={24} color="#d4d4d8" />
-          </TouchableOpacity>
+            <Image source={PROFILE_ICON} style={styles.userIcon} contentFit="contain" />
+          </AnimatedPressable>
         </View>
       </View>
 
@@ -108,18 +220,29 @@ export default function HomeScreen() {
 
       {/* Progress */}
       <View style={styles.progressRow}>
-        <Text style={styles.progressLabel}>{watchedPercent}% Watched</Text>
-        <View style={styles.progressTrack}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${(watchedCount / FILMS.length) * 100}%` as any },
-            ]}
-          />
+        <View style={styles.progressLeftBlock}>
+          <Text style={styles.progressLabel}>{watchedPercent}% Watched</Text>
         </View>
-        <View style={styles.moviesCount}>
-          <Text style={styles.moviesCountBold}>{watchedCount}</Text>
-          <Text style={styles.moviesCountLight}>/{FILMS.length} Movies</Text>
+        <View style={styles.progressCenterBlock}>
+          <View
+            style={styles.progressTrack}
+            onLayout={(event) => {
+              const width = event.nativeEvent.layout.width;
+              progressTrackWidth.value = width;
+              progressFillWidth.value = withTiming(width * watchedRatio, {
+                duration: MOTION_DURATION_SLOW,
+                easing: MOTION_EASING_STANDARD,
+              });
+            }}
+          >
+            <Animated.View style={[styles.progressFill, progressFillAnimatedStyle]} />
+          </View>
+        </View>
+        <View style={styles.progressRightBlock}>
+          <View style={styles.moviesCount}>
+            <Text style={styles.moviesCountBold}>{watchedInCategory}</Text>
+            <Text style={styles.moviesCountLight}>/{totalInCategory} Movies</Text>
+          </View>
         </View>
       </View>
     </View>
@@ -129,18 +252,23 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <FlatList
         data={filteredFilms}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         numColumns={2}
-        ListHeaderComponent={() => ListHeader}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
+        ListHeaderComponent={ListHeader}
+        ListEmptyComponent={ListEmpty}
+        stickyHeaderIndices={[0]}
+        columnWrapperStyle={filteredFilms.length > 0 ? styles.row : undefined}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: insets.bottom + 24 },
+          filteredFilms.length === 0 && styles.listContentEmpty,
+        ]}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <MovieCard
-            item={item}
-            onPress={() => router.push({ pathname: '/movie', params: { id: item.id } })}
-          />
-        )}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={7}
+        removeClippedSubviews
+        renderItem={renderMovieCard}
       />
     </View>
   );
@@ -154,26 +282,25 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    paddingHorizontal: H_PAD,
+    paddingHorizontal: 0,
     marginBottom: 16,
+    backgroundColor: '#131316',
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 56,
+    paddingVertical: 8,
     marginBottom: 4,
   },
   logoContainer: {
-    width: 200,
-    height: 44,
-    overflow: 'hidden',
+    width: 160,
+    height: 28,
   },
   logoImage: {
-    width: 200,
-    height: LOGO_IMG_H,
-    position: 'absolute',
-    top: LOGO_CROP_TOP,
-    left: 0,
+    width: '100%',
+    height: '100%',
   },
   pointsRow: {
     flexDirection: 'row',
@@ -193,6 +320,13 @@ const styles = StyleSheet.create({
   },
   userBtn: {
     padding: 8,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userIcon: {
+    width: 24,
+    height: 24,
   },
 
   // Categories
@@ -208,11 +342,23 @@ const styles = StyleSheet.create({
   progressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    width: '100%',
+    gap: 4,
     paddingVertical: 16,
   },
+  progressLeftBlock: {
+    flex: 1,
+  },
+  progressCenterBlock: {
+    flex: 1,
+  },
+  progressRightBlock: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
   progressLabel: {
-    fontSize: 14,
+    fontSize: 16,
+    lineHeight: 16,
     color: '#d4d4d8',
     fontFamily: 'Gabarito_600SemiBold',
   },
@@ -227,7 +373,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: 'white',
+    backgroundColor: '#00ff87',
     borderRadius: 144,
   },
   moviesCount: {
@@ -235,12 +381,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   moviesCountBold: {
-    fontSize: 14,
+    fontSize: 16,
+    lineHeight: 16,
     color: '#ffffff',
     fontFamily: 'Gabarito_600SemiBold',
   },
   moviesCountLight: {
-    fontSize: 14,
+    fontSize: 16,
+    lineHeight: 16,
     color: '#d4d4d8',
     fontFamily: 'Gabarito_400Regular',
   },
@@ -248,6 +396,9 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingHorizontal: H_PAD,
+  },
+  listContentEmpty: {
+    flexGrow: 1,
   },
   row: {
     gap: CARD_GAP,
@@ -271,16 +422,23 @@ const styles = StyleSheet.create({
   },
   cardOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 12,
   },
   cardIconBtn: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    padding: 8,
-    borderRadius: 8,
+    top: 6,
+    right: 6,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  cardIcon: {
+    width: 24,
+    height: 24,
   },
   pointsTag: {
     position: 'absolute',
@@ -298,7 +456,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   cardInfo: {
-    gap: 4,
+    gap: 2,
   },
   cardTitle: {
     fontSize: 14,
@@ -309,5 +467,47 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Gabarito_400Regular',
     color: '#d4d4d8',
+  },
+  emptyState: {
+    flex: 1,
+    minHeight: 260,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  emptyStateIcon: {
+    width: 24,
+    height: 24,
+    opacity: 0.8,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: '#ffffff',
+    fontFamily: 'Gabarito_600SemiBold',
+    textAlign: 'center',
+  },
+  emptyStateDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#a1a1aa',
+    fontFamily: 'Gabarito_400Regular',
+    textAlign: 'center',
+  },
+  emptyStateButton: {
+    marginTop: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#3f3f46',
+    backgroundColor: '#1d1d20',
+  },
+  emptyStateButtonText: {
+    fontSize: 14,
+    lineHeight: 14,
+    color: '#f4f4f5',
+    fontFamily: 'Gabarito_600SemiBold',
   },
 });
