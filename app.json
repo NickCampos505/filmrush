@@ -9,9 +9,13 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "bundleIdentifier": "com.nickcampos.filmrush",
+      "buildNumber": "1",
       "supportsTablet": true
     },
     "android": {
+      "package": "com.nickcampos.filmrush",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
