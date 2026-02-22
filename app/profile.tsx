@@ -8,28 +8,40 @@ import {
   Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { FILMS } from '@/data/films';
 import { useFilmStore } from '@/context/film-store';
+import { useExperienceMode } from '@/context/experience-mode';
 import { AnimatedPressable } from '@/components/animated-pressable';
 
-const CHEVRON_LEFT_ICON = require('@/assets/images/chevron-left.svg');
-const AWARD_ICON = require('@/assets/images/award.svg');
-const TROPHY_ICON = require('@/assets/images/trophy.svg');
-const EXPORT_ICON = require('@/assets/images/export.svg');
-const INFO_ICON = require('@/assets/images/info.svg');
-const FILE_ICON = require('@/assets/images/file.svg');
+const CHEVRON_LEFT_ICON = require('@/assets/images/icons/chevron-left.svg');
+const AWARD_ICON = require('@/assets/images/icons/award.svg');
+const TROPHY_ICON = require('@/assets/images/icons/trophy.svg');
+const EXPORT_ICON = require('@/assets/images/icons/export.svg');
+const INFO_ICON = require('@/assets/images/icons/info.svg');
+const FILE_ICON = require('@/assets/images/icons/file.svg');
 
 type OptionRowProps = {
   iconSource: number;
   label: string;
   dimmed?: boolean;
   badge?: string;
+  rightText?: string;
+  showChevron?: boolean;
   onPress?: () => void;
 };
 
-function OptionRow({ iconSource, label, dimmed = false, badge, onPress }: OptionRowProps) {
+function OptionRow({
+  iconSource,
+  label,
+  dimmed = false,
+  badge,
+  rightText,
+  showChevron = false,
+  onPress,
+}: OptionRowProps) {
   return (
     <AnimatedPressable
       style={styles.optionRow}
@@ -53,6 +65,8 @@ function OptionRow({ iconSource, label, dimmed = false, badge, onPress }: Option
           </View>
         )}
       </View>
+      {!!rightText && <Text style={styles.optionRightText}>{rightText}</Text>}
+      {showChevron && <Feather name="chevron-right" size={20} color="#a1a1aa" />}
     </AnimatedPressable>
   );
 }
@@ -61,6 +75,8 @@ export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { totalPoints, watchedCount } = useFilmStore();
+  const { mode } = useExperienceMode();
+  const isCompetitive = mode !== 'casual';
   const watchedPercent = Math.round((watchedCount / FILMS.length) * 100);
 
   async function handleShareWithFriends() {
@@ -100,39 +116,57 @@ export default function ProfileScreen() {
           <View style={styles.progressHeader}>
             <Image source={TROPHY_ICON} style={styles.progressIcon} contentFit="contain" />
             <Text style={styles.progressTitle}>Achievements</Text>
-            <View style={styles.pointsBadge}>
-              <Text style={styles.pointsText}>{totalPoints} Pts.</Text>
-            </View>
+            {isCompetitive && (
+              <View style={styles.pointsBadge}>
+                <Text style={styles.pointsText}>{totalPoints} Pts.</Text>
+              </View>
+            )}
           </View>
 
-          {/* Progress Bar */}
-          <View style={styles.progressBarWrap}>
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${(watchedCount / FILMS.length) * 100}%` as any },
-                ]}
-              />
-            </View>
-          </View>
+          {isCompetitive ? (
+            <>
+              {/* Progress Bar */}
+              <View style={styles.progressBarWrap}>
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      { width: `${(watchedCount / FILMS.length) * 100}%` as any },
+                    ]}
+                  />
+                </View>
+              </View>
 
-          {/* Stats */}
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{watchedPercent}%</Text>
-              <Text style={styles.statLabel}>Watched</Text>
+              {/* Stats */}
+              <View style={styles.statsRow}>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{watchedPercent}%</Text>
+                  <Text style={styles.statLabel}>Watched</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{watchedCount}</Text>
+                  <Text style={styles.statLabel}>/{FILMS.length} Movies</Text>
+                </View>
+              </View>
+            </>
+          ) : (
+            <View style={styles.casualTrackingCard}>
+              <Text style={styles.casualTrackingValue}>{watchedCount}</Text>
+              <Text style={styles.casualTrackingLabel}>Movies tracked</Text>
             </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{watchedCount}</Text>
-              <Text style={styles.statLabel}>/{FILMS.length} Movies</Text>
-            </View>
-          </View>
+          )}
         </View>
 
         {/* Options Section */}
         <View style={styles.optionsSection}>
           <OptionRow iconSource={AWARD_ICON} label="Badges" dimmed badge="Soon" />
+          <OptionRow
+            iconSource={EXPORT_ICON}
+            label="Experience"
+            rightText={isCompetitive ? 'Competitive' : 'Casual'}
+            showChevron
+            onPress={() => router.push('/experience')}
+          />
           <OptionRow iconSource={EXPORT_ICON} label="Share With Friends" onPress={handleShareWithFriends} />
           <OptionRow iconSource={INFO_ICON} label="About" onPress={() => router.push('/about')} />
           <OptionRow iconSource={FILE_ICON} label="Privacy Policy" onPress={() => router.push('/privacy')} />
@@ -287,6 +321,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
+  optionRightText: {
+    fontSize: 14,
+    lineHeight: 16,
+    color: '#a1a1aa',
+    fontFamily: 'Gabarito_600SemiBold',
+  },
   optionLabel: {
     fontSize: 16,
     fontFamily: 'Gabarito_600SemiBold',
@@ -309,5 +349,26 @@ const styles = StyleSheet.create({
     fontFamily: 'Gabarito_600SemiBold',
     color: '#a1a1aa',
     lineHeight: 14 * 1.15,
+  },
+  casualTrackingCard: {
+    marginTop: 4,
+    marginHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#3f3f46',
+    borderRadius: 16,
+    padding: 16,
+    gap: 4,
+  },
+  casualTrackingValue: {
+    fontSize: 40,
+    lineHeight: 46,
+    color: '#ffffff',
+    fontFamily: 'Gabarito_600SemiBold',
+  },
+  casualTrackingLabel: {
+    fontSize: 14,
+    lineHeight: 16,
+    color: '#d4d4d8',
+    fontFamily: 'Gabarito_600SemiBold',
   },
 });

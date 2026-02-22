@@ -2,8 +2,8 @@ import React from 'react';
 import { Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 
-const PLUS_ICON = require('@/assets/images/plus.svg');
-const CHECK_ICON = require('@/assets/images/check.svg');
+const PLUS_ICON = require('@/assets/images/icons/plus.svg');
+const CHECK_ICON = require('@/assets/images/icons/check.svg');
 
 type WatchButtonProps = {
   watched: boolean;

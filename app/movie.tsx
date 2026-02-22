@@ -7,16 +7,18 @@ import {
   Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { WatchButton } from '@/components/watch-button';
 import { FILMS } from '@/data/films';
 import { useFilmStore } from '@/context/film-store';
+import { useExperienceMode } from '@/context/experience-mode';
 import { AnimatedPressable } from '@/components/animated-pressable';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const POSTER_HEIGHT = SCREEN_HEIGHT * 0.58;
-const CHEVRON_LEFT_ICON = require('@/assets/images/chevron-left.svg');
+const CHEVRON_LEFT_ICON = require('@/assets/images/icons/chevron-left.svg');
 
 export default function MovieScreen() {
   const router = useRouter();
@@ -24,6 +26,8 @@ export default function MovieScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const film = FILMS.find((f) => f.id === id);
   const { watchedIds, toggleWatched } = useFilmStore();
+  const { mode } = useExperienceMode();
+  const isCompetitive = mode !== 'casual';
   const watched = !!film && watchedIds.has(film.id);
 
   if (!film) return null;
@@ -91,12 +95,14 @@ export default function MovieScreen() {
         accessibilityRole="button"
         accessibilityLabel="Go back"
       >
+        <BlurView intensity={8} tint="dark" style={styles.controlBlurBackground} />
         <View style={styles.controlBlurOverlay} />
         <Image source={CHEVRON_LEFT_ICON} style={styles.backIcon} contentFit="contain" />
       </AnimatedPressable>
 
-      {watched && (
+      {isCompetitive && watched && (
         <View style={[styles.watchedPointsTag, { top: insets.top + 12 }]}>
+          <BlurView intensity={8} tint="dark" style={styles.controlBlurBackground} />
           <View style={styles.controlBlurOverlay} />
           <Text style={styles.watchedPointsText}>+{film.points} Pts.</Text>
         </View>
@@ -213,7 +219,10 @@ const styles = StyleSheet.create({
   },
   controlBlurOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  },
+  controlBlurBackground: {
+    ...StyleSheet.absoluteFillObject,
   },
   backIcon: {
     width: 28,

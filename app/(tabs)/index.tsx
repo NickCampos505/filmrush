@@ -8,11 +8,13 @@ import {
   Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Tag } from '@/components/tag';
 import { CATEGORY_FILTERS, CategoryKey, Film, FILMS } from '@/data/films';
 import { useFilmStore } from '@/context/film-store';
+import { useExperienceMode } from '@/context/experience-mode';
 import { AnimatedPressable } from '@/components/animated-pressable';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { MOTION_DURATION_SLOW, MOTION_EASING_STANDARD } from '@/constants/motion';
@@ -23,15 +25,16 @@ const CARD_GAP = 16;
 const CARD_WIDTH = (SCREEN_WIDTH - H_PAD * 2 - CARD_GAP) / 2;
 const CARD_HEIGHT = CARD_WIDTH * (266 / 177);
 
-const LOGO = require('@/assets/images/logo.svg');
-const EYE_ICON = require('@/assets/images/eye.svg');
-const CHECK_CIRCLE_ICON = require('@/assets/images/check-circle.svg');
-const PROFILE_ICON = require('@/assets/images/user.svg');
-const EMPTY_STATE_ICON = require('@/assets/images/info.svg');
+const LOGO = require('@/assets/images/icons/logo.svg');
+const EYE_ICON = require('@/assets/images/icons/eye.svg');
+const CHECK_CIRCLE_ICON = require('@/assets/images/icons/check-circle.svg');
+const PROFILE_ICON = require('@/assets/images/icons/user.svg');
+const EMPTY_STATE_ICON = require('@/assets/images/icons/info.svg');
 
 type MovieCardProps = {
   item: Film;
   watched: boolean;
+  showPoints: boolean;
   onOpenMovie: (id: string) => void;
   onToggleWatched: (id: string) => void;
 };
@@ -39,6 +42,7 @@ type MovieCardProps = {
 const MovieCard = memo(function MovieCard({
   item,
   watched,
+  showPoints,
   onOpenMovie,
   onToggleWatched,
 }: MovieCardProps) {
@@ -88,6 +92,8 @@ const MovieCard = memo(function MovieCard({
           accessibilityLabel={watched ? `Unmark ${item.title} as watched` : `Mark ${item.title} as watched`}
           accessibilityState={{ checked: watched }}
         >
+          <BlurView intensity={8} tint="dark" style={styles.cardControlBlur} />
+          <View style={styles.cardControlOverlay} />
           <Image
             source={watched ? CHECK_CIRCLE_ICON : EYE_ICON}
             style={styles.cardIcon}
@@ -95,9 +101,11 @@ const MovieCard = memo(function MovieCard({
           />
         </AnimatedPressable>
 
-        <Animated.View style={[styles.pointsTag, pointsTagAnimatedStyle]} pointerEvents="none">
+        {showPoints && (
+          <Animated.View style={[styles.pointsTag, pointsTagAnimatedStyle]} pointerEvents="none">
             <Text style={styles.pointsTagText}>+{item.points} Pts.</Text>
-        </Animated.View>
+          </Animated.View>
+        )}
       </View>
 
       <View style={styles.cardInfo}>
@@ -111,6 +119,8 @@ const MovieCard = memo(function MovieCard({
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { mode } = useExperienceMode();
+  const isCompetitive = mode !== 'casual';
   const [activeCategory, setActiveCategory] = useState<'all' | CategoryKey>('all');
   const { totalPoints, watchedIds, toggleWatched } = useFilmStore();
   const progressTrackWidth = useSharedValue(0);
@@ -128,22 +138,26 @@ export default function HomeScreen() {
   const totalInCategory = filteredFilms.length;
   const watchedRatio = totalInCategory > 0 ? watchedInCategory / totalInCategory : 0;
   const watchedPercent = Math.round(watchedRatio * 100);
+
   const handleOpenMovie = useCallback(
     (id: string) => router.push({ pathname: '/movie', params: { id } }),
     [router]
   );
+
   const handleToggleWatched = useCallback((id: string) => toggleWatched(id), [toggleWatched]);
   const keyExtractor = useCallback((item: Film) => item.id, []);
+
   const renderMovieCard = useCallback(
     ({ item }: { item: Film }) => (
       <MovieCard
         item={item}
         watched={watchedIds.has(item.id)}
+        showPoints={isCompetitive}
         onOpenMovie={handleOpenMovie}
         onToggleWatched={handleToggleWatched}
       />
     ),
-    [handleOpenMovie, handleToggleWatched, watchedIds]
+    [handleOpenMovie, handleToggleWatched, isCompetitive, watchedIds]
   );
 
   useEffect(() => {
@@ -181,15 +195,16 @@ export default function HomeScreen() {
 
   const ListHeader = (
     <View style={[styles.header, { paddingTop: insets.top }]}>
-      {/* Logo + Points */}
       <View style={styles.headerRow}>
         <View style={styles.logoContainer}>
           <Image source={LOGO} style={styles.logoImage} contentFit="contain" />
         </View>
         <View style={styles.pointsRow}>
-          <View style={styles.pointsBadge}>
-            <Text style={styles.pointsText}>{totalPoints} Pts.</Text>
-          </View>
+          {isCompetitive && (
+            <View style={styles.pointsBadge}>
+              <Text style={styles.pointsText}>{totalPoints} Pts.</Text>
+            </View>
+          )}
           <AnimatedPressable
             style={styles.userBtn}
             onPress={() => router.push('/profile')}
@@ -202,7 +217,6 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Categories */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -218,33 +232,34 @@ export default function HomeScreen() {
         ))}
       </ScrollView>
 
-      {/* Progress */}
-      <View style={styles.progressRow}>
-        <View style={styles.progressLeftBlock}>
-          <Text style={styles.progressLabel}>{watchedPercent}% Watched</Text>
-        </View>
-        <View style={styles.progressCenterBlock}>
-          <View
-            style={styles.progressTrack}
-            onLayout={(event) => {
-              const width = event.nativeEvent.layout.width;
-              progressTrackWidth.value = width;
-              progressFillWidth.value = withTiming(width * watchedRatio, {
-                duration: MOTION_DURATION_SLOW,
-                easing: MOTION_EASING_STANDARD,
-              });
-            }}
-          >
-            <Animated.View style={[styles.progressFill, progressFillAnimatedStyle]} />
+      {isCompetitive && (
+        <View style={styles.progressRow}>
+          <View style={styles.progressLeftBlock}>
+            <Text style={styles.progressLabel}>{watchedPercent}% Watched</Text>
+          </View>
+          <View style={styles.progressCenterBlock}>
+            <View
+              style={styles.progressTrack}
+              onLayout={(event) => {
+                const width = event.nativeEvent.layout.width;
+                progressTrackWidth.value = width;
+                progressFillWidth.value = withTiming(width * watchedRatio, {
+                  duration: MOTION_DURATION_SLOW,
+                  easing: MOTION_EASING_STANDARD,
+                });
+              }}
+            >
+              <Animated.View style={[styles.progressFill, progressFillAnimatedStyle]} />
+            </View>
+          </View>
+          <View style={styles.progressRightBlock}>
+            <View style={styles.moviesCount}>
+              <Text style={styles.moviesCountBold}>{watchedInCategory}</Text>
+              <Text style={styles.moviesCountLight}>/{totalInCategory} Movies</Text>
+            </View>
           </View>
         </View>
-        <View style={styles.progressRightBlock}>
-          <View style={styles.moviesCount}>
-            <Text style={styles.moviesCountBold}>{watchedInCategory}</Text>
-            <Text style={styles.moviesCountLight}>/{totalInCategory} Movies</Text>
-          </View>
-        </View>
-      </View>
+      )}
     </View>
   );
 
@@ -280,7 +295,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#131316',
   },
 
-  // Header
   header: {
     paddingHorizontal: 0,
     marginBottom: 16,
@@ -329,7 +343,6 @@ const styles = StyleSheet.create({
     height: 24,
   },
 
-  // Categories
   categoriesContent: {
     flexDirection: 'row',
     gap: 8,
@@ -338,7 +351,6 @@ const styles = StyleSheet.create({
     paddingRight: H_PAD,
   },
 
-  // Progress
   progressRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -393,7 +405,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Gabarito_400Regular',
   },
 
-  // List
   listContent: {
     paddingHorizontal: H_PAD,
   },
@@ -405,7 +416,6 @@ const styles = StyleSheet.create({
     marginBottom: CARD_GAP,
   },
 
-  // Card
   card: {
     width: CARD_WIDTH,
   },
@@ -432,9 +442,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  cardControlBlur: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  cardControlOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
   },
   cardIcon: {
     width: 24,
